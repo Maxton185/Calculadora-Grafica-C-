@@ -19,6 +19,7 @@
 #include <QChart>
 #include <QChartView>
 #include <QLineSeries>
+#include <QScatterSeries> 
 #include <QValueAxis>
 #include <QPainter>
 #include <QPen>
@@ -27,6 +28,7 @@
 // Componentes de Eventos de Dispositivos de Entrada
 #include <QWheelEvent>
 #include <QMouseEvent>
+#include <QResizeEvent> 
 
 // Librería del Motor Matemático Parsers
 #include "exprtk.hpp"
@@ -34,7 +36,7 @@
 using namespace QtCharts;
 
 // ============================================================================
-// SUBCLASE PERSONALIZADA DE QCHARTVIEW (CONTROL INTERACTIVO)
+// SUBCLASE PERSONALIZADA DE QCHARTVIEW 
 // ============================================================================
 class CustomChartView : public QChartView {
 private:
@@ -43,6 +45,11 @@ private:
     QLabel* m_labelCoordenadas = nullptr; 
 
 protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QChartView::resizeEvent(event);
+        this->viewport()->update();
+    }
+
     void wheelEvent(QWheelEvent *event) override {
         qreal factor = (event->angleDelta().y() > 0) ? 1.1 : 0.9;
         chart()->zoom(factor);
@@ -115,6 +122,7 @@ private:
     QPushButton     *btnLimpiar;
     QPushButton     *btnCentrar;              
     QPushButton     *btnGraficar;
+    QPushButton     *btnRaices; 
     
     QLabel          *lblCoordenadas;          
 
@@ -125,14 +133,14 @@ private:
 
 public:
     WindowGraficadora(QWidget *parent = nullptr) : QWidget(parent) {
-        setWindowTitle("Graficadora Científica Pro - Cuadrícula Estilo GeoGebra");
+        setWindowTitle("Graficadora Pro - Análisis Numérico");
         resize(1250, 750);
 
         QHBoxLayout *mainLayout = new QHBoxLayout(this);
         QVBoxLayout *sidebar = new QVBoxLayout();
         sidebar->setSpacing(8);
 
-        sidebar->addWidget(new QLabel("<b>Rango Inicial (X):</b>"));
+        sidebar->addWidget(new QLabel("<b>Rango de Análisis (X):</b>"));
         
         QHBoxLayout *rangoLayout = new QHBoxLayout();
         spinMinX = new QDoubleSpinBox();
@@ -144,12 +152,12 @@ public:
         spinMaxX = new QDoubleSpinBox();
         spinMaxX->setRange(-10000.0, 10000.0);
         spinMaxX->setValue(10.0);
-        rangoLayout->addWidget(new QLabel("Max:"));
+        rangoLayout->addWidget(new QLabel("Máx:"));
         rangoLayout->addWidget(spinMaxX);
         sidebar->addLayout(rangoLayout);
 
         sidebar->addWidget(new QLabel("<br><b>Ingresar Expresión:</b>"));
-        editFuncion = new QLineEdit("x^2");
+        editFuncion = new QLineEdit("x^2 - 4"); 
         sidebar->addWidget(editFuncion);
 
         btnAgregar = new QPushButton("Añadir a la Lista");
@@ -160,15 +168,19 @@ public:
         sidebar->addWidget(listaFunciones);
 
         QHBoxLayout *limpiezaLayout = new QHBoxLayout();
-        btnEliminarSeleccionada = new QPushButton("Eliminar 1");
+        btnEliminarSeleccionada = new QPushButton("Eliminar Selección");
         btnLimpiar = new QPushButton("Limpiar Todo");
         limpiezaLayout->addWidget(btnEliminarSeleccionada);
         limpiezaLayout->addWidget(btnLimpiar);
         sidebar->addLayout(limpiezaLayout);
 
-        btnGraficar = new QPushButton("¡GRAFICAR!");
+        btnGraficar = new QPushButton("GRAFICAR");
         btnGraficar->setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold; font-size: 13px; padding: 10px;");
         sidebar->addWidget(btnGraficar);
+
+        btnRaices = new QPushButton("Encontrar Raíces Exactas");
+        btnRaices->setStyleSheet("background-color: #c0392b; color: white; font-weight: bold; font-size: 12px; padding: 8px;");
+        sidebar->addWidget(btnRaices);
 
         QFrame *line = new QFrame();
         line->setFrameShape(QFrame::HLine);
@@ -193,18 +205,15 @@ public:
         chartView = new CustomChartView(chart);
         chartView->setLabelCoordenadas(lblCoordenadas); 
 
-        // ====================================================================
-        // CONFIGURACIÓN DE EJES DINÁMICOS (ESTILO GEOGEBRA)
-        // ====================================================================
         axisX = new QValueAxis();
         axisX->setTitleText("Eje X");
         axisX->setTickType(QValueAxis::TicksDynamic);
-        axisX->setTickAnchor(0.0); // El origen siempre será una línea de rejilla
+        axisX->setTickAnchor(0.0); 
 
         axisY = new QValueAxis();
         axisY->setTitleText("Eje Y");
         axisY->setTickType(QValueAxis::TicksDynamic);
-        axisY->setTickAnchor(0.0); // El origen siempre será una línea de rejilla
+        axisY->setTickAnchor(0.0); 
 
         chart->addAxis(axisX, Qt::AlignBottom);
         chart->addAxis(axisY, Qt::AlignLeft);
@@ -212,14 +221,20 @@ public:
         mainLayout->addLayout(sidebar, 1);
         mainLayout->addWidget(chartView, 4);
 
-        // Algoritmo matemático para calcular intervalos perfectos (1, 2, 5, 10, etc.) al cambiar el zoom o paneo
         auto optimizarSubdivisiones = [](QValueAxis *axis) {
-            double amplitud = axis->max() - axis->min();
-            if (amplitud <= 0) return;
+            double max_val = axis->max();
+            double min_val = axis->min();
+            if (!std::isfinite(max_val) || !std::isfinite(min_val)) return;
             
-            // Buscamos tener aproximadamente entre 10 y 12 subdivisiones visibles en pantalla
+            double amplitud = max_val - min_val;
+            if (amplitud <= 1e-12) return; 
+            
             double intervaloCrudo = amplitud / 10.0;
+            if (intervaloCrudo <= 0) return;
+            
             double logBase10 = std::log10(intervaloCrudo);
+            if (!std::isfinite(logBase10)) return;
+            
             double potenciaDe10 = std::pow(10.0, std::floor(logBase10));
             double proporcion = intervaloCrudo / potenciaDe10;
             
@@ -229,24 +244,39 @@ public:
             else if (proporcion < 7.5)  pasoLimpio = 5.0 * potenciaDe10;
             else                        pasoLimpio = 10.0 * potenciaDe10;
             
-            axis->setTickInterval(pasoLimpio);
+            if (pasoLimpio > 0 && std::isfinite(pasoLimpio)) {
+                axis->setTickInterval(pasoLimpio);
+            }
         };
 
-        // Conectar las señales de cambio de rango para recalcular la rejilla en tiempo real
         connect(axisX, &QValueAxis::rangeChanged, [this, optimizarSubdivisiones](qreal min, qreal max) {
             optimizarSubdivisiones(this->axisX);
         });
-        
         connect(axisY, &QValueAxis::rangeChanged, [this, optimizarSubdivisiones](qreal min, qreal max) {
             optimizarSubdivisiones(this->axisY);
         });
 
-        // Conexión de señales de botones
         connect(btnAgregar, &QPushButton::clicked, [this]() {
             QString formula = editFuncion->text().trimmed();
             if(!formula.isEmpty()) {
-                listaFunciones->addItem(formula);
-                editFuncion->clear();
+                std::string ecuacion = formula.toStdString();
+                double x_variable;
+                exprtk::symbol_table<double> symbol_table;
+                symbol_table.add_variable("x", x_variable);
+                symbol_table.add_constants();
+
+                exprtk::expression<double> expression;
+                expression.register_symbol_table(symbol_table);
+                exprtk::parser<double> parser;
+                
+                if (!parser.compile(ecuacion, expression)) {
+                    QMessageBox::warning(this, "Error de Sintaxis", 
+                        "La función tiene un error de tipeo.\nRevisa la sintaxis matemática.");
+                    editFuncion->selectAll(); 
+                } else {
+                    listaFunciones->addItem(formula);
+                    editFuncion->clear();
+                }
                 editFuncion->setFocus();
             }
         });
@@ -260,8 +290,6 @@ public:
                 } else {
                     chart->removeAllSeries();
                 }
-            } else {
-                QMessageBox::information(this, "Selección", "Haz clic en una función de la lista para eliminarla.");
             }
         });
 
@@ -282,6 +310,12 @@ public:
         connect(btnGraficar, &QPushButton::clicked, [this]() {
             this->procesarYRenderizar();
         });
+
+        connect(btnRaices, &QPushButton::clicked, [this]() {
+            btnRaices->setEnabled(false); 
+            this->calcularYMarcarRaices();
+            btnRaices->setEnabled(true);  
+        });
     }
 
 private:
@@ -295,11 +329,10 @@ private:
         double maxX = spinMaxX->value();
 
         if (minX >= maxX) {
-            QMessageBox::critical(this, "Error", "El límite X mínimo no puede ser mayor o igual al máximo.");
+            QMessageBox::critical(this, "Error", "El límite X mínimo no puede ser mayor al máximo.");
             return;
         }
 
-        // Trazado de Ejes Estilo GeoGebra
         QPen penEjes(QColor("#2c3e50"));
         penEjes.setWidth(3);
 
@@ -328,30 +361,18 @@ private:
         double globalMinY = 0.0;
         double globalMaxY = 0.0;
         bool esPrimerPuntoGlobal = true;
+        const double LIMITE_Y_SEGURO = 10000.0; 
 
         const QList<QColor> paletaColores = {
-            QColor("#e74c3c"), // Rojo
-            QColor("#3498db"), // Azul
-            QColor("#2ecc71"), // Verde
-            QColor("#9b59b6"), // Morado
-            QColor("#e67e22"), // Naranja
-            QColor("#1abc9c"), // Turquesa
-            QColor("#f1c40f")  // Amarillo
+            QColor("#3498db"), QColor("#2ecc71"), QColor("#9b59b6"),
+            QColor("#e67e22"), QColor("#1abc9c"), QColor("#f1c40f"), QColor("#e74c3c")
         };
 
         for (int k = 0; k < totalFunciones; ++k) {
             QString qstrFormula = listaFunciones->item(k)->text();
             std::string ecuacion = qstrFormula.toStdString();
 
-            QLineSeries *serieCurva = new QLineSeries();
-            serieCurva->setName(qstrFormula);
-
             QColor colorActual = paletaColores[k % paletaColores.size()];
-            QPen penCurva = serieCurva->pen();
-            penCurva.setWidth(2);
-            penCurva.setColor(colorActual);
-            serieCurva->setPen(penCurva);
-
             listaFunciones->item(k)->setForeground(colorActual);
 
             double x_variable;
@@ -361,25 +382,57 @@ private:
 
             exprtk::expression<double> expression;
             expression.register_symbol_table(symbol_table);
-
             exprtk::parser<double> parser;
-            if (!parser.compile(ecuacion, expression)) {
-                QMessageBox::critical(this, "Error Sintáctico", "Error en la expresión: " + qstrFormula);
-                delete serieCurva;
-                listaFunciones->item(k)->setForeground(QColor("#7f8c8d"));
-                continue;
-            }
+            
+            if(!parser.compile(ecuacion, expression)) continue;
 
-            double delta = (maxX - minX) / 1200.0;
+            double delta = (maxX - minX) / 3000.0; 
             if (delta <= 0) delta = 0.01;
+
+            QLineSeries *serieActual = nullptr;
+            bool enSegmentoValido = false;
+            bool primerSegmentoDeLaFuncion = true; 
+            int segmentosCreados = 0; 
 
             for (x_variable = minX; x_variable <= maxX + (delta / 2.0); x_variable += delta) {
                 double y_calculado = expression.value();
-                if (!std::isfinite(y_calculado)) continue; 
+                
+                if (!std::isfinite(y_calculado) || std::abs(y_calculado) > LIMITE_Y_SEGURO) {
+                    enSegmentoValido = false;
+                    continue; 
+                }
 
-                serieCurva->append(x_variable, y_calculado);
+                if (!enSegmentoValido) {
+                    if (segmentosCreados > 200) continue; 
 
-                if (x_variable <= maxX) {
+                    serieActual = new QLineSeries();
+                    segmentosCreados++;
+                    
+                    if (primerSegmentoDeLaFuncion) {
+                        serieActual->setName(qstrFormula);
+                        primerSegmentoDeLaFuncion = false;
+                    }
+                    
+                    QPen penCurva = serieActual->pen();
+                    penCurva.setWidth(2);
+                    penCurva.setColor(colorActual);
+                    serieActual->setPen(penCurva);
+                    
+                    chart->addSeries(serieActual);
+                    serieActual->attachAxis(axisX);
+                    serieActual->attachAxis(axisY);
+                    
+                    if (serieActual->name().isEmpty() && !chart->legend()->markers(serieActual).isEmpty()) {
+                        chart->legend()->markers(serieActual).first()->setVisible(false);
+                    }
+                    enSegmentoValido = true;
+                }
+
+                if (serieActual) {
+                    serieActual->append(x_variable, y_calculado);
+                }
+
+                if (x_variable <= maxX && std::abs(y_calculado) < (LIMITE_Y_SEGURO * 0.5)) {
                     if (esPrimerPuntoGlobal) {
                         globalMinY = y_calculado;
                         globalMaxY = y_calculado;
@@ -390,15 +443,127 @@ private:
                     }
                 }
             }
-            chart->addSeries(serieCurva);
-            serieCurva->attachAxis(axisX);
-            serieCurva->attachAxis(axisY);
         }
 
         axisX->setRange(minX, maxX);
         double holguraY = (globalMaxY - globalMinY) * 0.1;
-        if (holguraY == 0.0) holguraY = 1.0;
-        axisY->setRange(globalMinY - holguraY, globalMaxY + holguraY);
+        if (holguraY == 0.0) holguraY = 5.0; 
+        
+        if (std::abs(globalMaxY - globalMinY) > 5000) {
+            axisY->setRange(-50, 50); 
+        } else {
+            axisY->setRange(globalMinY - holguraY, globalMaxY + holguraY);
+        }
+    }
+
+    void calcularYMarcarRaices() {
+        if (listaFunciones->count() == 0) return;
+
+        this->procesarYRenderizar();
+
+        QScatterSeries *serieRaices = new QScatterSeries();
+        serieRaices->setName("Raíces Exactas");
+        serieRaices->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+        serieRaices->setMarkerSize(12.0); 
+        serieRaices->setColor(QColor("#e74c3c"));
+        serieRaices->setBorderColor(QColor("#c0392b"));
+
+        double minX = spinMinX->value();
+        double maxX = spinMaxX->value();
+        double delta = (maxX - minX) / 3000.0;
+        if (delta <= 0) delta = 0.01;
+
+        std::vector<double> raicesUnicas; 
+        const double TOLERANCIA_DUPLICADOS = (maxX - minX) / 1000.0; 
+
+        for (int k = 0; k < listaFunciones->count(); ++k) {
+            std::string ecuacion = listaFunciones->item(k)->text().toStdString();
+            double x_variable;
+            exprtk::symbol_table<double> symbol_table;
+            symbol_table.add_variable("x", x_variable);
+            symbol_table.add_constants();
+
+            exprtk::expression<double> expression;
+            expression.register_symbol_table(symbol_table);
+            exprtk::parser<double> parser;
+            
+            if(!parser.compile(ecuacion, expression)) continue;
+
+            double prev_y = NAN;
+            double prev_x = minX;
+
+            for (double x_val = minX; x_val <= maxX; x_val += delta) {
+                x_variable = x_val;
+                double y = expression.value();
+
+                if (!std::isfinite(y)) {
+                    prev_y = NAN;
+                    prev_x = x_val;
+                    continue;
+                }
+
+                if (!std::isnan(prev_y)) {
+                    if ((prev_y <= 0 && y >= 0) || (prev_y >= 0 && y <= 0)) {
+                        
+                        double a = prev_x;
+                        double b = x_val;
+                        double fa = prev_y;
+                        double fb = y;
+                        
+                        for (int step = 0; step < 50; step++) {
+                            double mid = (a + b) / 2.0;
+                            x_variable = mid;
+                            double fmid = expression.value();
+                            
+                            if (!std::isfinite(fmid)) break; 
+                            
+                            if ((fa > 0 && fmid < 0) || (fa < 0 && fmid > 0)) {
+                                b = mid;
+                                fb = fmid;
+                            } else {
+                                a = mid;
+                                fa = fmid;
+                            }
+                        }
+                        
+                        double root_x = (a + b) / 2.0;
+                        x_variable = root_x;
+                        double comprobacion = expression.value();
+
+                        if (std::isfinite(comprobacion) && std::abs(comprobacion) < 0.1) {
+                            bool esDuplicada = false;
+                            for (double raizGuardada : raicesUnicas) {
+                                if (std::abs(raizGuardada - root_x) < TOLERANCIA_DUPLICADOS) {
+                                    esDuplicada = true;
+                                    break; 
+                                }
+                            }
+                            
+                            if (!esDuplicada) {
+                                raicesUnicas.push_back(root_x);
+                                serieRaices->append(root_x, 0.0);
+                                
+                                if (raicesUnicas.size() > 200) break;
+                            }
+                        }
+                    }
+                }
+                prev_y = y;
+                prev_x = x_val;
+            }
+        }
+
+        if (!raicesUnicas.empty()) {
+            chart->addSeries(serieRaices);
+            serieRaices->attachAxis(axisX);
+            serieRaices->attachAxis(axisY);
+            QMessageBox::information(this, "Análisis Numérico Completado", 
+                QString("Se han detectado %1 raíces únicas (ceros reales) en el rango de visualización.").arg(raicesUnicas.size()));
+        } else {
+            delete serieRaices;
+            QMessageBox::information(this, "Análisis Numérico Completado", 
+                "No existen intersecciones reales con el eje X en el rango actual.");
+        }
     }
 };
 
