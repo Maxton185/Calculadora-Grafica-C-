@@ -6,11 +6,11 @@ CONFIG += console
 HEADERS += \
     CambiarTema.h \
     exprtk.hpp \
-    CustomChartView.h \
+    ZoomYPaneo.h \
     WindowGraficadora.h
 
 SOURCES += \
-    CustomChartView.cpp \
+    ZoomYPaneo.cpp \
     WindowGraficadora.cpp \
     main.cpp
 
