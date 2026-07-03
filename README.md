@@ -1,4 +1,4 @@
-# Calculadora-Grafica-C++-
+# Calculadora-Grafica-C++
 
 Este proyecto es una calculadora gráfica desarrollada en C++ utilizando el framework Qt5 (Widgets y Charts) para la interfaz de usuario y la renderización de los gráficos. Utiliza la librería matemática `exprtk` para el análisis y evaluación de las expresiones matemáticas.
 
