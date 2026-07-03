@@ -9,7 +9,7 @@
 #include <QLabel>
 #include <QChart>
 #include <QValueAxis>
-#include "CustomChartView.h"
+#include "ZoomYPaneo.h"
 
 class WindowGraficadora : public QWidget {
     Q_OBJECT
@@ -29,7 +29,7 @@ private:
     QLabel          *lblCoordenadas;          
 
     QChart          *chart;
-    CustomChartView *chartView;
+    ZoomYPaneo *chartView;
     QValueAxis      *axisX;
     QValueAxis      *axisY;
 
