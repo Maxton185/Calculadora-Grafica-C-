@@ -1,27 +1,27 @@
-#include "CustomChartView.h"
+#include "ZoomYPaneo.h"
 
-CustomChartView::CustomChartView(QChart *chart, QWidget *parent) : QChartView(chart, parent) {
+ZoomYPaneo::ZoomYPaneo(QChart chart, QWidgetparent) : QChartView(chart, parent) {
     setRubberBand(QChartView::NoRubberBand); 
     setRenderHint(QPainter::Antialiasing); 
     setMouseTracking(true); 
 }
 
-void CustomChartView::setLabelCoordenadas(QLabel* label) {
+void ZoomYPaneo::setLabelCoordenadas(QLabel* label) {
     m_labelCoordenadas = label;
 }
 
-void CustomChartView::resizeEvent(QResizeEvent *event) {
+void ZoomYPaneo::resizeEvent(QResizeEvent event) {
     QChartView::resizeEvent(event);
     this->viewport()->update();
 }
 
-void CustomChartView::wheelEvent(QWheelEvent *event) {
+void ZoomYPaneo::wheelEvent(QWheelEventevent) {
     qreal factor = (event->angleDelta().y() > 0) ? 1.1 : 0.9;
     chart()->zoom(factor);
     event->accept(); 
 }
 
-void CustomChartView::mousePressEvent(QMouseEvent *event) {
+void ZoomYPaneo::mousePressEvent(QMouseEvent event) {
     if (event->button() == Qt::RightButton) {
         m_isPanning = true;
         m_lastMousePos = event->pos();
@@ -32,7 +32,7 @@ void CustomChartView::mousePressEvent(QMouseEvent *event) {
     }
 }
 
-void CustomChartView::mouseMoveEvent(QMouseEvent *event) {
+void ZoomYPaneo::mouseMoveEvent(QMouseEventevent) {
     if (m_labelCoordenadas) {
         QPointF mathPoint = chart()->mapToValue(event->pos());
         m_labelCoordenadas->setText(QString("X: %1\nY: %2")
@@ -50,7 +50,7 @@ void CustomChartView::mouseMoveEvent(QMouseEvent *event) {
     }
 }
 
-void CustomChartView::mouseReleaseEvent(QMouseEvent *event) {
+void ZoomYPaneo::mouseReleaseEvent(QMouseEvent *event) {
     if (event->button() == Qt::RightButton) {
         m_isPanning = false;
         setCursor(Qt::ArrowCursor); 
