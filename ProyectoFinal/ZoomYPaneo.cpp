@@ -59,3 +59,4 @@ void ZoomYPaneo::mouseReleaseEvent(QMouseEvent *event) {
         QChartView::mouseReleaseEvent(event);
     }
 }
+
