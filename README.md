@@ -25,13 +25,13 @@ Sigue estos pasos para clonar el repositorio y compilar el código fuente en tu 
 **1. Clonar el repositorio**
 Descarga los archivos del proyecto a tu computadora:
 ```bash
-git clone [https://github.com/Maxton185/Calculadora-Grafica-C-.git](https://github.com/Maxton185/Calculadora-Grafica-C-.git)
+git clone https://github.com/Maxton185/Calculadora-Grafica-C-.git
 ```
 
 **2. Entrar a la carpeta del proyecto**
 Navega hacia el directorio donde se encuentra el archivo `.pro`:
 ```bash
-cd Calculadora-Grafica-C-/ProyectoFinal
+cd Calculadora-Grafica-C-/VersionColor
 ```
 
 **3. Generar el archivo Makefile**
