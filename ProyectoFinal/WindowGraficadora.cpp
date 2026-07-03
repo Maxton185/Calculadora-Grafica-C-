@@ -134,7 +134,7 @@ WindowGraficadora::WindowGraficadora(QWidget *parent) : QWidget(parent) {
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignBottom);
 
-    chartView = new CustomChartView(chart);
+    chartView = new ZoomYPaneo(chart);
     chartView->setLabelCoordenadas(lblCoordenadas); 
 
     axisX = new QValueAxis();
