@@ -9,7 +9,7 @@
 
 using namespace QtCharts;
 
-class CustomChartView : public QChartView {
+class ZoomYPaneo : public QChartView {
     Q_OBJECT 
 private:
     bool m_isPanning = false;   
@@ -24,7 +24,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
 public:
-    explicit CustomChartView(QChart *chart, QWidget *parent = nullptr);
+    explicit ZoomYPaneo(QChart *chart, QWidget *parent = nullptr);
     void setLabelCoordenadas(QLabel* label);
 };
 
